@@ -13,7 +13,8 @@ from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 from datetime import datetime
 from scipy import stats
-from autolab_core import YamlConfig
+import yaml as YamlConfig
+# from autolab_core import YamlConfig
 
 # local functions
 from utils import *
@@ -476,7 +477,9 @@ if __name__ == '__main__':
         os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu
 
     # load config file into dict() format
-    config = YamlConfig(args.config_file)
+    with open(args.config_file, 'r') as f:
+        config = YamlConfig.safe_load(f)
+    # config = YamlConfig(args.config_file)
 
     # create the output folder (name of experiment) for storing model result such as logger information
     if not os.path.exists(config['OUTPUT_DIR']):
@@ -492,10 +495,10 @@ if __name__ == '__main__':
         os.mkdir(config['MODEL']['WEIGHTS']['PATH'])
 
     # print configuration
-    print('=' * 40)
-    print(config.file_contents)
-    config.save(os.path.join(config['OUTPUT_DIR'], config['SAVE_CONFIG_NAME']))
-    print('=' * 40)
+    # print('=' * 40)
+    # print(config.file_contents)
+    # config.save(os.path.join(config['OUTPUT_DIR'], config['SAVE_CONFIG_NAME']))
+    # print('=' * 40)
 
     # initialize random seed for torch and numpy
     init_seed(config['MANUAL_SEED'])

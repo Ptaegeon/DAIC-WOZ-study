@@ -65,7 +65,8 @@
 
 OUTPUT_DIR: inference_DepressionAnalysis_AV
 SAVE_CONFIG_NAME: inference_DepressionAnalysis_AV.yaml
-CKPTS_DIR: /cvhci/temp/wpingcheng/ckpts_new/
+CKPTS_DIR: D:\DepressionEstimation\models\AVT_ConvLSTM_Sub-Attention\cvhci\temp\wpingcheng\ckpts_new
+# CKPTS_DIR: cvhci\temp\wpingcheng\ckpts_new
 TYPE: AV+ConvBiLSTM+PHQ-Subscores+Sub-Attention
 MANUAL_SEED: 1
 LOG_TITLE: Depression Detection with audio and visual data, ConvBiLSTM, PHQ-Subscores, Fusion-Sub-Attention, KLDivLoss, ASAM
