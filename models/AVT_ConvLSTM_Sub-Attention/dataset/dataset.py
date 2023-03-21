@@ -88,15 +88,17 @@ class DepressionDataset(Dataset):
 
         # get visual feature
         if self.visual_with_gaze:
-            fkps_path = os.path.join(self.root_dir, 'facial_keypoints')
-            gaze_path = os.path.join(self.root_dir, 'gaze_vectors')
+            # fkps_path = os.path.join(self.root_dir, 'audio')
+            gaze_path = os.path.join(self.root_dir, 'Pose_gaze_au')
 
             # load and create final visual feature
-            fkps_file = np.sort(os.listdir(fkps_path))[idx]
+            # fkps_file = np.sort(os.listdir(fkps_path))[idx]
             gaze_file = np.sort(os.listdir(gaze_path))[idx]
-            fkps = np.load(os.path.join(fkps_path, fkps_file))
-            gaze = np.load(os.path.join(gaze_path, gaze_file))
-            visual = np.concatenate((fkps, gaze), axis=1)
+            # fkps = np.load(os.path.join(fkps_path, fkps_file))
+            # gaze = np.load(os.path.join(gaze_path, gaze_file))
+            visual = np.load(os.path.join(gaze_path, gaze_file))
+            # visual = np.concatenate((fkps, gaze), axis=1)
+            
         else:
             fkps_path = os.path.join(self.root_dir, 'facial_keypoints')
             # load and create final visual feature
@@ -115,7 +117,8 @@ class DepressionDataset(Dataset):
 
         # get audio feature
         if self.use_mel_spectrogram:
-            audio_path = os.path.join(self.root_dir, 'audio', 'mel-spectrogram')
+            # audio_path = os.path.join(self.root_dir, 'audio', 'mel-spectrogram')
+            audio_path = os.path.join(self.root_dir, 'audio')
         else:
             audio_path = os.path.join(self.root_dir, 'audio', 'spectrogram')
         audio_file = np.sort(os.listdir(audio_path))[idx]
@@ -132,7 +135,7 @@ class DepressionDataset(Dataset):
         # hog = np.load(os.path.join(hog_path, hog_file))
 
         # summary
-        if self.mode == 'test':
+        if self.mode != 'train':
             session = {'ID': self.IDs[idx],
                        'gender_gt': self.gender_gt[idx],
                        'phq_binary_gt': self.phq_binary_gt[idx],

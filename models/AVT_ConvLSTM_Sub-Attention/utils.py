@@ -82,8 +82,8 @@ def get_sampler_phq_score(phq_score_gt):
 def get_dataloaders(data_config):
 
     dataloaders = {}
-    for mode in ['train', 'test']:
-        if mode == 'test':
+    for mode in ['train', 'validation', 'test']:
+        if mode != 'train':
             # for test dataset, we don't need shuffle, sampler and augmentation
             dataset = DepressionDataset(data_config[f'{mode}_ROOT_DIR'.upper()], mode,
                                         use_mel_spectrogram=data_config['USE_MEL_SPECTROGRAM'],
@@ -245,17 +245,58 @@ def get_models(model_config, args, model_type=None, ckpt_path=None):
         model_config['WEIGHTS']['INCLUDED'] = [x.lower() for x in model_config['WEIGHTS']['INCLUDED']]
 
         checkpoint = torch.load(weights_path)
-
+        '''
+        Dataparalle로 학습한 weight를 torch.save로 저장하면
+        layer 명 앞에 'module.'이라는 prefix가 생성된다.
+        single GPU로 torch.load를 하면 'module.'이 제거된 layer 명에 load가 된다.
+        그래서 'module.' 을 제거한 후에 torch.load를 해야 한다.
+        '''
+        ##############################################################
+        # Dataparelle : False
+        
         if 'visual_net' in model_config['WEIGHTS']['INCLUDED']:
             print("Loading Deep Visual Net weights from {}".format(weights_path))
+            
+            del_list = []
+            for n, v in checkpoint['visual_net'].items():
+                # .module이 중간에 포함된 형태라면 (".module","")로 치환
+                new = 'module.' + n
+                del_list.append((new, n))
+            
+            for dd, d  in del_list:
+                checkpoint['visual_net'][dd] = checkpoint['visual_net'][d]
+                del checkpoint['visual_net'][d]
             visual_net.load_state_dict(checkpoint['visual_net'])
 
         if 'audio_net' in model_config['WEIGHTS']['INCLUDED']:
             print("Loading Deep Audio Net weights from {}".format(weights_path))
+            
+            del_list = []
+            for n, v in checkpoint['audio_net'].items():
+                # .module이 중간에 포함된 형태라면 (".module","")로 치환
+                new = 'module.' + n
+                del_list.append((new, n))
+            
+            for dd, d  in del_list:
+                checkpoint['audio_net'][dd] = checkpoint['audio_net'][d]
+                del checkpoint['audio_net'][d]
+                
             audio_net.load_state_dict(checkpoint['audio_net'])
         
         if 'text_net' in model_config['WEIGHTS']['INCLUDED']:
             print("Loading Deep Text Net weights from {}".format(weights_path))
+            
+            del_list = []
+            for n, v in checkpoint['text_net'].items():
+                # .module이 중간에 포함된 형태라면 (".module","")로 치환
+                new = 'module.' + n
+                del_list.append((new, n))
+            
+            for dd, d  in del_list:
+                checkpoint['text_net'][dd] = checkpoint['text_net'][d]
+                del checkpoint['text_net'][d]
+                
+                
             text_net.load_state_dict(checkpoint['text_net'])
 
         # if 'fusion_net' in model_config['WEIGHTS']['INCLUDED']:
@@ -264,6 +305,17 @@ def get_models(model_config, args, model_type=None, ckpt_path=None):
 
         if 'evaluator' in model_config['WEIGHTS']['INCLUDED']:
             print("Loading MUSDL weights from {}".format(weights_path))
+            
+            del_list = []
+            for n, v in checkpoint['evaluator'].items():
+                # .module이 중간에 포함된 형태라면 (".module","")로 치환
+                new = 'module.' + n
+                del_list.append((new, n))
+            
+            for dd, d  in del_list:
+                checkpoint['evaluator'][dd] = checkpoint['evaluator'][d]
+                del checkpoint['evaluator'][d]
+                
             evaluator.load_state_dict(checkpoint['evaluator'])
 
     return visual_net, audio_net, text_net, evaluator  # fusion_net
@@ -512,12 +564,13 @@ def get_accuracy(gt, pred):
 def get_classification_scores(gt, pred):
     [[tp, fp], [fn, tn]] = standard_confusion_matrix(gt, pred)
     # TPR(sensitivity), TNR(specificity)
-    tpr = tp / (tp + fn)
-    tnr = tn / (tn + fp)
+    eps = 1e-10
+    tpr = tp / (tp + fn + eps)
+    tnr = tn / (tn + fp + eps)
     # Precision, Recall, F1-score
-    precision = tp / (tp + fp)
-    recall = tp / (tp + fn)
-    f1_score = 2 * (precision * recall) / (precision + recall)
+    precision = tp / (tp + fp + eps)
+    recall = tp / (tp + fn + eps)
+    f1_score = 2 * (precision * recall) / (precision + recall + eps)
     return tpr, tnr, precision, recall, f1_score
 
 

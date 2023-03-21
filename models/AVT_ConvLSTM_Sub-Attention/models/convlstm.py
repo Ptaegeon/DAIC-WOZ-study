@@ -271,12 +271,20 @@ class FullyConnected(nn.Module):
 class ConvLSTM_Visual(nn.Module):
     def __init__(self, input_dim, output_dim, conv_hidden, lstm_hidden, num_layers, activation, norm, dropout):
         super(ConvLSTM_Visual, self).__init__()
-        self.conv = ConvBlock2d(in_channels=input_dim,
-                                out_channels=conv_hidden,
-                                kernel=(72, 3),
-                                stride=(1, 1),
-                                pad=(0, 1),
-                                normalisation='bn')
+        # self.conv = ConvBlock2d(in_channels=input_dim,
+        #                         out_channels=conv_hidden,
+        #                         kernel=(72, 3),
+        #                         stride=(1, 1),
+        #                         pad=(0, 1),
+        #                         normalisation='bn')
+        self.conv = ConvBlock1d(in_channels=input_dim,      # 49
+                                out_channels=conv_hidden,   # 25
+                                kernel=3,
+                                stride=1,
+                                pad=1,
+                                normalisation='bn')         # ['bn', 'wn', else]
+        
+        
         self.pool = nn.MaxPool1d(kernel_size=3,
                                  stride=3,
                                  padding=0)
@@ -293,8 +301,10 @@ class ConvLSTM_Visual(nn.Module):
                                  normalisation=norm)
 
     def forward(self, net_input):
+        
         x = net_input
-        batch, C, F, T = x.shape
+        batch, T, F = x.shape
+        # batch, C, F, T = x.shape
         x = self.conv(x)
         x = self.pool(x.squeeze())
         x = self.drop(x)
@@ -330,6 +340,7 @@ class ConvLSTM_Audio(nn.Module):
                                  normalisation=norm)        # ['bn', 'wn']: nn.BatchNorm1d, nn.utils.weight_norm
 
     def forward(self, net_input):
+        
         x = net_input
         batch, freq, width = x.shape
         x = self.conv(x)

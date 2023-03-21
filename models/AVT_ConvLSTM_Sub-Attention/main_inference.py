@@ -19,6 +19,9 @@ from autolab_core import YamlConfig
 from utils import *
 from models.bypass_bn import enable_running_stats, disable_running_stats
 
+import collections
+collections.Callable = collections.abc.Callable
+
 
 def main(dataloaders, visual_net, audio_net, text_net, evaluator, base_logger, writer, config, args, model_type, ckpt_path):
 
@@ -91,8 +94,14 @@ def main(dataloaders, visual_net, audio_net, text_net, evaluator, base_logger, w
                 def model_processing(input):
                     # get facial visual feature with Deep Visual Net'
                     # input shape for visual_net must be (B, C, F, T) = (batch_size, channels, features, time series)
-                    B, T, F, C = input['visual'].shape
-                    visual_input = input['visual'].permute(0, 3, 2, 1).contiguous()
+                    # import pdb
+                    # pdb.set_trace()
+                    
+                    
+                    B, F, C = input['visual'].shape
+                    # B, T, F, C = input['visual'].shape
+                    # visual_input = input['visual'].permute(0, 3, 2, 1).contiguous()
+                    visual_input = input['visual'].permute(0, 2, 1).contiguous()
                     visual_features = visual_net(visual_input.to(args.device))  # output dim: [B, visual net output dim]
 
                     # get audio feature with Deep Audio Net'
@@ -477,13 +486,13 @@ if __name__ == '__main__':
                         type=str,
                         help="set up torch device: 'cpu' or 'cuda' (GPU)",
                         required=False,
-                        default=torch.device('cuda' if torch.cuda.is_available() else 'cpu'))
+                        default=torch.device('cpu' if torch.cuda.is_available() else 'cpu'))
     # remember to set the gpu device number
     parser.add_argument('--gpu',
                         type=str,
                         help='id of gpu device(s) to be used',
                         required=False,
-                        default='2, 3')
+                        default='0')
     parser.add_argument('--save',
                         type=bool,
                         help='if set true, save the best model',

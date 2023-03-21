@@ -63,19 +63,25 @@ import tensorflow_hub as hub
 
 
 def create_folders(root_dir):
-    folders = ['original_data', 'clipped_data']
-    subfolders = ['facial_keypoints', 'gaze_vectors', 'action_units', 
-                  'position_rotation', 'hog_features', 'audio', 'text']
-    audio_subfolders = ['spectrogram', 'mel-spectrogram']
+    # DAIC-WOZ
+    # folders = ['original_data', 'clipped_data']
+    # subfolders = ['facial_keypoints', 'gaze_vectors', 'action_units', 
+    #               'position_rotation', 'hog_features', 'audio', 'text']
+    # audio_subfolders = ['spectrogram', 'mel-spectrogram']
+
+    # E-DAIC-WOZ
+    # folders = ['original_data', 'clipped_data']
+    mode = ['train', 'valid', 'test']
+    subfolders = ['Pose_gaze_au', 'audio', 'text']
+    # audio_subfolders = ['spectrogram', 'mel-spectrogram']
+
+
+
 
     os.makedirs(root_dir, exist_ok=True)
-    for i in folders:
+    for i in mode:
         for j in subfolders:
-            if j == 'audio':
-                for m in audio_subfolders:
-                    os.makedirs(os.path.join(root_dir, i, j, m), exist_ok=True)
-            else:
-                os.makedirs(os.path.join(root_dir, i, j), exist_ok=True)
+            os.makedirs(os.path.join(root_dir, i, j), exist_ok=True)
 
                             
 def min_max_scaler(data):
@@ -482,7 +488,7 @@ def sliding_window(fkps_features, gaze_features, AUs_features, pose_features,
     text_frame_size = 10
     text_hop_size = get_text_hop_size(text_feature, text_frame_size, num_frame)
     
-    if ID > 485:
+    if ID  < 485:
         print('creating the data from the rest of the participants')
         # start sliding through and generating data
         for i in range(num_frame):
@@ -518,20 +524,21 @@ def sliding_window_e_daic(Pose_gaze_au_features,
     text_frame_size = 10
     text_hop_size = get_text_hop_size(text_feature, text_frame_size, num_frame)
     
-    if ID > 485:
-        print('creating the data from the rest of the participants')
-        # start sliding through and generating data
-        for i in range(num_frame):
-            frame_sample_gaze = visual_padding(Pose_gaze_au_features[i*hop_size:i*hop_size+frame_size], frame_size)
-            frame_sample_mspec = audio_padding(mel_spectro[:, i*hop_size:i*hop_size+frame_size], frame_size)
-            frame_sample_text = text_padding(text_feature[i*text_hop_size:i*text_hop_size+text_frame_size], text_frame_size)
-            
-            # start storing
-            np.save(os.path.join(output_root, 'Pose_gaze_au', f'{ID}-{i:02}_Pose_gaze_au.npy'), frame_sample_gaze)
-            np.save(os.path.join(output_root, 'audio', 'mel-spectrogram', f'{ID}-{i:02}_audio.npy'), frame_sample_mspec)
-            np.save(os.path.join(output_root, 'text', f'{ID}-{i:02}_text.npy'), frame_sample_text)
-    else:
-        print('pass')
+    # os.makedirs(os.path.join(output_root, 'Pose_gaze_au'), exist_ok=True)
+    # os.makedirs(os.path.join(output_root, 'spectrogram'), exist_ok=True)
+    # os.makedirs(os.path.join(output_root, 'text'), exist_ok=True)
+    
+    print('creating the data from the rest of the participants')
+    # start sliding through and generating data
+    for i in range(num_frame):
+        frame_sample_gaze = visual_padding(Pose_gaze_au_features[i*hop_size:i*hop_size+frame_size], frame_size)
+        frame_sample_mspec = audio_padding(mel_spectro[:, i*hop_size:i*hop_size+frame_size], frame_size)
+        frame_sample_text = text_padding(text_feature[i*text_hop_size:i*text_hop_size+text_frame_size], text_frame_size)
+        
+        # start storing
+        np.save(os.path.join(output_root, 'Pose_gaze_au', f'{ID}-{i:02}_Pose_gaze_au.npy'), frame_sample_gaze)
+        np.save(os.path.join(output_root, 'audio', f'{ID}-{i:02}_audio.npy'), frame_sample_mspec)
+        np.save(os.path.join(output_root, 'text', f'{ID}-{i:02}_text.npy'), frame_sample_text)
 
     return num_frame
 
@@ -539,188 +546,216 @@ def sliding_window_e_daic(Pose_gaze_au_features,
 if __name__ == '__main__':
 
     # output root
-    root = '/cvhci/temp/wpingcheng'
-    root_dir = os.path.join(root, 'DAIC_WOZ-generated_database_V2', 'train')
+    root = 'E:\DepressionEstimation'
+    root_dir = os.path.join(root, 'DAIC_WOZ-generated_database_V2')
     create_folders(root_dir)
     np.random.seed(1)
 
     # read training gt file
     # gt_path = '/cvhci/data/depression/DAIC-WOZ_dataset/full_train_split_Depression_AVEC2017.csv'
-    gt_path = 'E:\DepressionEstimation\models\AVT_ConvLSTM_Sub-Attention\cvhci\data\depression\DAIC-WOZ_dataset\\full_train_split_Depression_AVEC2017.csv'
-    gt_df = pd.read_csv(gt_path) 
+    # gt_path = 'E:\DepressionEstimation\models\AVT_ConvLSTM_Sub-Attention\cvhci\data\depression\DAIC-WOZ_dataset\\full_train_split_Depression_AVEC2017.csv'
+    gt_path = 'E:\DepressionEstimation\DAIC_WOZ-generated_database_V2/full_PHQ8_Labels.csv'
+    
+    gt_df = pd.read_csv(gt_path, header=0) 
 
+    train_list = pd.read_csv('E:\DepressionEstimation\DAIC_WOZ-generated_database_V2/train_split.csv', header=0)['Participant_ID'].tolist() 
+    valid_list = pd.read_csv('E:\DepressionEstimation\DAIC_WOZ-generated_database_V2/dev_split.csv', header=0)['Participant_ID'].tolist() 
+    test_list = pd.read_csv('E:\DepressionEstimation\DAIC_WOZ-generated_database_V2/test_split.csv', header=0)['Participant_ID'].tolist()
+    
+
+    mode_list = {'train' : train_list, 'valid': valid_list, 'test' : test_list}
+    
+    
     # initialization
     use_embed_large = hub.load("https://tfhub.dev/google/universal-sentence-encoder-large/5")
     window_size = 60   # 60s
     overlap_size = 10  # 10s
-    GT = {'original_data': {'ID_gt':[], 'gender_gt': [], 'phq_binary_gt': [], 'phq_score_gt':[], 'phq_subscores_gt':[]}, 
-          'clipped_data': {'ID_gt':[], 'gender_gt': [], 'phq_binary_gt': [], 'phq_score_gt':[], 'phq_subscores_gt':[]}}
     
-    for i in range(len(gt_df)):
-        # extract training gt details
-        patient_ID = gt_df['Participant_ID'][i]
-        phq_binary_gt = gt_df['PHQ8_Binary'][i]
-        phq_score_gt = gt_df['PHQ8_Score'][i]
-        gender_gt = gt_df['Gender'][i]
-        phq_subscores_gt = gt_df.iloc[i, 4:].to_numpy().tolist()
-        print(f'Processing Participant {patient_ID}, Gender: {gender_gt} ...')
-        print(f'- PHQ Binary: {phq_binary_gt}, PHQ Score: {phq_score_gt}, Subscore: {phq_subscores_gt}')
-
-        # get all files path of participant
-        # keypoints_path = f'/cvhci/data/depression/DAIC-WOZ_dataset/{patient_ID}_P/{patient_ID}_CLNF_features3D.txt'
-        # gaze_path = f'/cvhci/data/depression/DAIC-WOZ_dataset/{patient_ID}_P/{patient_ID}_CLNF_gaze.txt'
-        # AUs_path = f'/cvhci/data/depression/DAIC-WOZ_dataset/{patient_ID}_P/{patient_ID}_CLNF_AUs.txt'
-        # pose_path = f'/cvhci/data/depression/DAIC-WOZ_dataset/{patient_ID}_P/{patient_ID}_CLNF_pose.txt'
-        # hog_path = f'/cvhci/data/depression/DAIC-WOZ_dataset/{patient_ID}_P/{patient_ID}_CLNF_hog.bin'
-        # audio_path = f'/cvhci/data/depression/DAIC-WOZ_dataset/{patient_ID}_P/{patient_ID}_AUDIO.wav'
-        # text_path = f'/cvhci/data/depression/DAIC-WOZ_dataset/{patient_ID}_P/{patient_ID}_TRANSCRIPT.csv'
+    for mode in ['train', 'valid', 'test']:
+        GT = {'clipped_data': {'ID_gt':[], 'gender_gt': [], 'phq_binary_gt': [], 'phq_score_gt':[], 'ptsd_binary_gt' :[], 'ptsd_score_gt': []}}
         
-        # E-DAIC-WOZ
-        keypoints_path = f'E:\E-DAIC-WOZ/{patient_ID}_P/{patient_ID}_CLNF_features3D.txt'
-        Pose_gaze_au_path = f'E:\E-DAIC-WOZ/{patient_ID}_P/features/{patient_ID}_OpenFace2.1.0_Pose_gaze_AUs.csv'
-        # AUs_path = f'D:\E-DAIC-WOZ/{patient_ID}_P/{patient_ID}_CLNF_AUs.txt'
-        # pose_path = f'D:\E-DAIC-WOZ/{patient_ID}_P/{patient_ID}_CLNF_pose.txt'
-        # hog_path = f'D:\E-DAIC-WOZ/{patient_ID}_P/{patient_ID}_CLNF_hog.bin'
-        audio_path = f'E:\E-DAIC-WOZ/{patient_ID}_P/{patient_ID}_AUDIO.wav'
-        text_path = f'E:\E-DAIC-WOZ/{patient_ID}_P/{patient_ID}_TRANSCRIPT.csv'
+        for i in range(len(gt_df)):
+            if gt_df['Participant_ID'][i] in mode_list['train']:
+                now = 'train'
+            elif gt_df['Participant_ID'][i] in mode_list['valid']:
+                now = 'valid'
+            elif gt_df['Participant_ID'][i] in mode_list['test']:
+                now = 'test'
+            if now != mode:
+                continue
+            
+            # extract training gt details
+            patient_ID = gt_df['Participant_ID'][i]
+            phq_binary_gt = gt_df['PHQ_Binary'][i]
+            phq_score_gt = gt_df['PHQ_Score'][i]
+            gender_gt = gt_df['Gender'][i]
+            pcl_binary_gt = gt_df['PCL-C_(PTSD)'][i]
+            pcl_score_gt = gt_df['PTSD_Severity'][i]
+            # phq_binary_gt = gt_df['PHQ8_Binary'][i]
+            # phq_score_gt = gt_df['PHQ8_Score'][i]
+            # phq_subscores_gt = gt_df.iloc[i, 4:].to_numpy().tolist()
+            print(f'Processing Participant {patient_ID} _ {mode}_data, Gender: {gender_gt} ...')
+            print(f'- PHQ Binary: {phq_binary_gt}, PHQ Score: {phq_score_gt}, PTSE_score: {pcl_binary_gt}, PTSD score : {pcl_score_gt} ) ...')
+            # print(f'- PHQ Binary: {phq_binary_gt}, PHQ Score: {phq_score_gt}, Subscore: {phq_subscores_gt}')
 
-        # read transcipt file
-        text_df = pd.read_csv(text_path, header = 0).fillna('')
-        # E-DAIC-WOZ
-        # import pdb
-        # pdb.set_trace()
+            # get all files path of participant
+            # keypoints_path = f'/cvhci/data/depression/DAIC-WOZ_dataset/{patient_ID}_P/{patient_ID}_CLNF_features3D.txt'
+            # gaze_path = f'/cvhci/data/depression/DAIC-WOZ_dataset/{patient_ID}_P/{patient_ID}_CLNF_gaze.txt'
+            # AUs_path = f'/cvhci/data/depression/DAIC-WOZ_dataset/{patient_ID}_P/{patient_ID}_CLNF_AUs.txt'
+            # pose_path = f'/cvhci/data/depression/DAIC-WOZ_dataset/{patient_ID}_P/{patient_ID}_CLNF_pose.txt'
+            # hog_path = f'/cvhci/data/depression/DAIC-WOZ_dataset/{patient_ID}_P/{patient_ID}_CLNF_hog.bin'
+            # audio_path = f'/cvhci/data/depression/DAIC-WOZ_dataset/{patient_ID}_P/{patient_ID}_AUDIO.wav'
+            # text_path = f'/cvhci/data/depression/DAIC-WOZ_dataset/{patient_ID}_P/{patient_ID}_TRANSCRIPT.csv'
+            
+            # E-DAIC-WOZ
+            keypoints_path = f'E:\E-DAIC-WOZ/{patient_ID}_P/{patient_ID}_CLNF_features3D.txt'
+            Pose_gaze_au_path = f'E:\E-DAIC-WOZ/{patient_ID}_P/features/{patient_ID}_OpenFace2.1.0_Pose_gaze_AUs.csv'
+            # AUs_path = f'D:\E-DAIC-WOZ/{patient_ID}_P/{patient_ID}_CLNF_AUs.txt'
+            # pose_path = f'D:\E-DAIC-WOZ/{patient_ID}_P/{patient_ID}_CLNF_pose.txt'
+            # hog_path = f'D:\E-DAIC-WOZ/{patient_ID}_P/{patient_ID}_CLNF_hog.bin'
+            audio_path = f'E:\E-DAIC-WOZ/{patient_ID}_P/{patient_ID}_AUDIO.wav'
+            text_path = f'E:\E-DAIC-WOZ/{patient_ID}_P/{patient_ID}_TRANSCRIPT.csv'
 
-        first_start_time = text_df['Start_Time'][0]
-        last_stop_time = text_df['End_Time'][len(text_df)-1]
-        # DAIC-WOZ
-        # first_start_time = text_df['start_time'][0]
-        # last_stop_time = text_df['stop_time'][len(text_df)-1]
-        
-        # read & process visual files
-        # E-DAIC-WOZ
-        Pose_gaze_au_features = load_pose_gaze_aus(Pose_gaze_au_path)
-        
-        # DAIC-WOZ
-        # Pose_gaze_au_features = load_gaze(Pose_gaze_au_path)
-        # fkps_features = load_keypoints(keypoints_path)
-        # AUs_features = load_AUs(AUs_path)
-        # pose_features = load_pose(pose_path)
-        # hog_features = load_hog(hog_path)
-        visual_sr = 30  # 30Hz
+            # read transcipt file
+            text_df = pd.read_csv(text_path, header = 0).fillna('')
+            # E-DAIC-WOZ
+            # import pdb
+            # pdb.set_trace()
 
-        # read audio file
-        audio, audio_sr = load_audio(audio_path)
+            first_start_time = text_df['Start_Time'][0]
+            last_stop_time = text_df['End_Time'][len(text_df)-1]
+            # DAIC-WOZ
+            # first_start_time = text_df['start_time'][0]
+            # last_stop_time = text_df['stop_time'][len(text_df)-1]
+            
+            # read & process visual files
+            # E-DAIC-WOZ
+            Pose_gaze_au_features = load_pose_gaze_aus(Pose_gaze_au_path)
+            
+            # DAIC-WOZ
+            # Pose_gaze_au_features = load_gaze(Pose_gaze_au_path)
+            # fkps_features = load_keypoints(keypoints_path)
+            # AUs_features = load_AUs(AUs_path)
+            # pose_features = load_pose(pose_path)
+            # hog_features = load_hog(hog_path)
+            visual_sr = 30  # 30Hz
 
-        # extract text feature
-        # E-DAIC-WOZ
-        text_feature = use_embedding_e_daic(text_df, model=use_embed_large)
-        
-        # DAIC-WOz
-        # text_feature = use_embedding(text_df, model=use_embed_large)
+            # read audio file
+            audio, audio_sr = load_audio(audio_path)
+
+            # extract text feature
+            # E-DAIC-WOZ
+            text_feature = use_embedding_e_daic(text_df, model=use_embed_large)
+            
+            # DAIC-WOz
+            # text_feature = use_embedding(text_df, model=use_embed_large)
 
 
-        ########################################
-        # feature extraction for original_data #
-        ########################################
+            ########################################
+            # feature extraction for original_data #
+            ########################################
 
-        print(f'Extracting feature of Participant {patient_ID} for original_data...')
+            # print(f'Extracting feature of Participant {patient_ID} for original_data...')
 
-        # visual
-        filtered_Pose_gaze_au_features = Pose_gaze_au_features[int(first_start_time*visual_sr):int(last_stop_time*visual_sr)]
-        # DAIC-WOZ
-        # filtered_gaze_features = gaze_features[int(first_start_time*visual_sr):int(last_stop_time*visual_sr)]
-        # filtered_AUs_features = AUs_features[int(first_start_time*visual_sr):int(last_stop_time*visual_sr)]
-        # filtered_pose_features = pose_features[int(first_start_time*visual_sr):int(last_stop_time*visual_sr)]
-        # filtered_hog_features = hog_features[int(first_start_time*visual_sr):int(last_stop_time*visual_sr)]
+            # # visual
+            # filtered_Pose_gaze_au_features = Pose_gaze_au_features[int(first_start_time*visual_sr):int(last_stop_time*visual_sr)]
+            # # DAIC-WOZ
+            # # filtered_gaze_features = gaze_features[int(first_start_time*visual_sr):int(last_stop_time*visual_sr)]
+            # # filtered_AUs_features = AUs_features[int(first_start_time*visual_sr):int(last_stop_time*visual_sr)]
+            # # filtered_pose_features = pose_features[int(first_start_time*visual_sr):int(last_stop_time*visual_sr)]
+            # # filtered_hog_features = hog_features[int(first_start_time*visual_sr):int(last_stop_time*visual_sr)]
 
-        # audio
-        # E-DAIC-WOZ
-        filtered_audio = audio_clipping_e_daic(audio, audio_sr, text_df, zero_padding=True)
-        # DAIC -WOZ
-        # filtered_audio = audio_clipping(audio, audio_sr, text_df, zero_padding=True)
-        
+            # # audio
+            # # E-DAIC-WOZ
+            # filtered_audio = audio_clipping_e_daic(audio, audio_sr, text_df, zero_padding=True)
+            # # DAIC -WOZ
+            # # filtered_audio = audio_clipping(audio, audio_sr, text_df, zero_padding=True)
+            
 
-        
-        # spectrogram, mel spectrogram
-        # spectro = normalize(convert_spectrogram(filtered_audio, frame_size=2048, hop_size=533))
-        mel_spectro = normalize(convert_mel_spectrogram(filtered_audio, audio_sr, 
-                                                        frame_size=2048, hop_size=533, num_mel_bands=80))
+            
+            # # spectrogram, mel spectrogram
+            # # spectro = normalize(convert_spectrogram(filtered_audio, frame_size=2048, hop_size=533))
+            # mel_spectro = normalize(convert_mel_spectrogram(filtered_audio, audio_sr, 
+            #                                                 frame_size=2048, hop_size=533, num_mel_bands=80))
 
-        ###################################################################
-        # start creating data in 'original_data' folder #
-        ###################################################################
+            # ###################################################################
+            # # start creating data in 'original_data' folder #
+            # ###################################################################
 
-        output_root = os.path.join(root_dir, 'original_data')
-        # E-DAIC-WOZ
-        num_frame = sliding_window_e_daic(filtered_Pose_gaze_au_features, mel_spectro, 
-                                   text_feature, visual_sr, window_size, overlap_size, output_root, patient_ID)
-        # DAIC-WOZ
-        # num_frame = sliding_window(filtered_fkps_features, filtered_gaze_features, filtered_AUs_features, 
-        #                            filtered_pose_features, filtered_hog_features, spectro, mel_spectro, 
-        #                            text_feature, visual_sr, window_size, overlap_size, output_root, patient_ID)
+            # output_root = os.path.join(root_dir, 'original_data')
+            # # E-DAIC-WOZ
+            # num_frame = sliding_window_e_daic(filtered_Pose_gaze_au_features, mel_spectro, 
+            #                            text_feature, visual_sr, window_size, overlap_size, output_root, patient_ID)
+            # # DAIC-WOZ
+            # # num_frame = sliding_window(filtered_fkps_features, filtered_gaze_features, filtered_AUs_features, 
+            # #                            filtered_pose_features, filtered_hog_features, spectro, mel_spectro, 
+            # #                            text_feature, visual_sr, window_size, overlap_size, output_root, patient_ID)
 
-        # replicate GT
-        for _ in range(num_frame):
-            GT['original_data']['ID_gt'].append(patient_ID)
-            GT['original_data']['gender_gt'].append(gender_gt)
-            GT['original_data']['phq_binary_gt'].append(phq_binary_gt)
-            GT['original_data']['phq_score_gt'].append(phq_score_gt)
-            GT['original_data']['phq_subscores_gt'].append(phq_subscores_gt)
+            # # replicate GT
+            # for _ in range(num_frame):
+            #     GT['original_data']['ID_gt'].append(patient_ID)
+            #     GT['original_data']['gender_gt'].append(gender_gt)
+            #     GT['original_data']['phq_binary_gt'].append(phq_binary_gt)
+            #     GT['original_data']['phq_score_gt'].append(phq_score_gt)
+            #     GT['original_data']['phq_subscores_gt'].append(phq_subscores_gt)
 
-        #######################################
-        # feature extraction for clipped_data #
-        #######################################
+            #######################################
+            # feature extraction for clipped_data #
+            #######################################
 
-        print(f'Extracting feature of Participant {patient_ID} for clipped_data...')
+            print(f'Extracting feature of Participant {patient_ID} for clipped_data...')
 
-        # visual
-        # E_DAIC-WOZ
-        clipped_Pose_gaze_au_features = visual_clipping_e_daic(Pose_gaze_au_features, visual_sr, text_df)
-        # DAIC-WOZ
-        # clipped_fkps_features = visual_clipping(fkps_features, visual_sr, text_df)
-        # clipped_gaze_features = visual_clipping(gaze_features, visual_sr, text_df)
-        # clipped_AUs_features = visual_clipping(AUs_features, visual_sr, text_df)
-        # clipped_pose_features = visual_clipping(pose_features, visual_sr, text_df)
-        # clipped_hog_features = visual_clipping(hog_features, visual_sr, text_df)
+            # visual
+            # E_DAIC-WOZ
+            clipped_Pose_gaze_au_features = visual_clipping_e_daic(Pose_gaze_au_features, visual_sr, text_df)
+            # DAIC-WOZ
+            # clipped_fkps_features = visual_clipping(fkps_features, visual_sr, text_df)
+            # clipped_gaze_features = visual_clipping(gaze_features, visual_sr, text_df)
+            # clipped_AUs_features = visual_clipping(AUs_features, visual_sr, text_df)
+            # clipped_pose_features = visual_clipping(pose_features, visual_sr, text_df)
+            # clipped_hog_features = visual_clipping(hog_features, visual_sr, text_df)
 
-        # audio
-        clipped_audio = audio_clipping_e_daic(audio, audio_sr, text_df, zero_padding=False)
-        # spectrogram, mel spectrogram
-        # spectro = normalize(convert_spectrogram(clipped_audio, frame_size=2048, hop_size=533))
-        mel_spectro = normalize(convert_mel_spectrogram(clipped_audio, audio_sr, 
-                                                        frame_size=2048, hop_size=533, num_mel_bands=80))
+            # audio
+            clipped_audio = audio_clipping_e_daic(audio, audio_sr, text_df, zero_padding=False)
+            # spectrogram, mel spectrogram
+            # spectro = normalize(convert_spectrogram(clipped_audio, frame_size=2048, hop_size=533))
+            mel_spectro = normalize(convert_mel_spectrogram(clipped_audio, audio_sr, 
+                                                            frame_size=2048, hop_size=533, num_mel_bands=80))
 
-        ##################################################################
-        # start creating data in 'clipped_data' folder #
-        ##################################################################
+            ##################################################################
+            # start creating data in 'clipped_data' folder #
+            ##################################################################
 
-        output_root = os.path.join(root_dir, 'clipped_data')
+            # output_root = os.path.join(root_dir, 'clipped_data')
 
-        # E-DAIC-WOZ
-        num_frame = sliding_window_e_daic(clipped_Pose_gaze_au_features, mel_spectro, 
-                                   text_feature, visual_sr, window_size, overlap_size, output_root, patient_ID)
-        
-        # DAIC-WOZ
-        # num_frame = sliding_window(clipped_fkps_features, clipped_gaze_features, clipped_AUs_features, 
-        #                            clipped_pose_features, clipped_hog_features, spectro, mel_spectro, 
-        #                            text_feature, visual_sr, window_size, overlap_size, output_root, patient_ID)
+            # E-DAIC-WOZ
+            num_frame = sliding_window_e_daic(clipped_Pose_gaze_au_features, mel_spectro, 
+                                    text_feature, visual_sr, window_size, overlap_size, os.path.join(root_dir, mode), patient_ID)
+            
+            # DAIC-WOZ
+            # num_frame = sliding_window(clipped_fkps_features, clipped_gaze_features, clipped_AUs_features, 
+            #                            clipped_pose_features, clipped_hog_features, spectro, mel_spectro, 
+            #                            text_feature, visual_sr, window_size, overlap_size, output_root, patient_ID)
 
-        # replicate GT
-        for _ in range(num_frame):
-            GT['clipped_data']['ID_gt'].append(patient_ID)
-            GT['clipped_data']['gender_gt'].append(gender_gt)
-            GT['clipped_data']['phq_binary_gt'].append(phq_binary_gt)
-            GT['clipped_data']['phq_score_gt'].append(phq_score_gt)
-            GT['clipped_data']['phq_subscores_gt'].append(phq_subscores_gt)
+            # replicate GT
+            for _ in range(num_frame):
+                GT['clipped_data']['ID_gt'].append(patient_ID)
+                GT['clipped_data']['gender_gt'].append(gender_gt)
+                GT['clipped_data']['phq_binary_gt'].append(phq_binary_gt)
+                GT['clipped_data']['phq_score_gt'].append(phq_score_gt)
+                GT['clipped_data']['ptsd_binary_gt'].append(pcl_binary_gt)
+                GT['clipped_data']['ptsd_score_gt'].append(pcl_score_gt)
+            
+                # GT['clipped_data']['phq_subscores_gt'].append(phq_subscores_gt)
 
-        print(f'Participant {patient_ID} done!')
-        print('='*50)
+            print(f'Participant {patient_ID} done!')
+            print('='*50)
 
-    # store new GT
-    for k1, v1 in GT.items():
-        for k2, v2 in v1.items():
-            # print(os.path.join(root_dir, k1, k2, f'{k3}.npy'))
-            np.save(os.path.join(root_dir, k1, f'{k2}.npy'), v2)
+        # store new GT
+        for k1, v1 in GT.items():
+            for k2, v2 in v1.items():
+                # print(os.path.join(root_dir, k1, k2, f'{k3}.npy'))
+                np.save(os.path.join(root_dir,mode, k1, f'{k2}.npy'), v2)
 
     print('All done!')
 
